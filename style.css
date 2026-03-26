@@ -1,0 +1,18 @@
+body {
+    margin: 0;
+    background-color: #fdf5e6; /* Кремовый фон как в мультике */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    touch-action: none;
+    font-family: 'Comic Sans MS', cursive;
+}
+#game-wrapper {
+    position: relative;
+    border: 8px solid #ffcc00; /* Желтая рамка */
+    border-radius: 20px;
+    box-shadow: 0 10px 0 #e6b800;
+    overflow: hidden;
+}
+canvas { background: #fff; display: block; }
