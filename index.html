@@ -1,27 +1,26 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Game</title>
+    <title>Neon Drift</title>
+    <style>
+        body {
+            background-color: black;
+            color: lime;
+            font-family: Arial, sans-serif;
+        }
+        h1 {
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome to the 2D Game!</h1>
-    <canvas id="gameCanvas" width="480" height="320"></canvas>
-    <script>
-        // Game setup and logic goes here
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-
-        function gameLoop() {
-            // Clear the canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Game logic and drawing goes here
-            
-            requestAnimationFrame(gameLoop); // Call gameLoop again
-        }
-
-        gameLoop(); // Start the game loop
-    </script>
+    <h1>Welcome to Neon Drift Game</h1>
+    <p>Get ready to dive into the most exciting racing experience of 2026!</p>
+    <p>Controls:</p>
+    <ul>
+        <li>Arrow keys - Steer your vehicle</li>
+        <li>Space - Boost</li>
+        <li>P - Pause</li>
+    </ul>
+    <p>Enjoy the game!</p>
 </body>
 </html>
