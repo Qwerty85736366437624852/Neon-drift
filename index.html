@@ -1,250 +1,96 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Три Кота: Весёлый Аэрохоккей</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Three Cats Air Hockey</title>
     <style>
-        /* Максимальная стилизация: Фон, Кнопка, Шрифты */
-        body { 
-            margin: 0; padding: 0; 
-            background: #fdf5e6 url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAYAAACp8Z5+AAAAIklEQVQIW2NkQAKrVq36z8gAFWPAAJRiYmBgYGBgYGBgYAD7FwIEXF8bIAAAAABJRU5ErkJggg=='); 
-            overflow: hidden; touch-action: none;
-            display: flex; justify-content: center; align-items: center; height: 100vh;
-            font-family: 'Comic Sans MS', cursive, sans-serif;
-            color: #4a2c1d;
-        }
-
-        #game-wrapper {
-            position: relative; width: 100%; height: 100%;
-            display: flex; justify-content: center; align-items: center;
-        }
-
-        canvas { 
-            background: rgba(255, 255, 255, 0.8);
-            border: 10px solid #ffcc00; 
-            border-radius: 30px;
-            box-shadow: 0 15px 0 #e6b800, 0 20px 30px rgba(0,0,0,0.2);
-            max-width: 90vw; max-height: 85vh;
-        }
-
-        #ui {
-            position: absolute; text-align: center;
-        }
-
-        button {
-            padding: 15px 40px; font-size: 24px; font-family: inherit;
-            background: #ffcc00; border: 4px solid #4a2c1d; color: #4a2c1d;
-            border-radius: 50px; cursor: pointer;
-            box-shadow: 0 8px 0 #e6b800;
-            transition: all 0.1s;
-        }
-
-        button:active { transform: translateY(4px); box-shadow: 0 4px 0 #e6b800; }
-        
-        #final-score { font-size: 32px; margin-bottom: 20px; font-weight: bold; text-shadow: 2px 2px 0 #fff; }
-        .hidden { display: none !important; }
+        body { font-family: Arial, sans-serif; text-align: center; }
+        canvas { border: 2px solid #000; background: #f0f0f0; }
     </style>
 </head>
 <body>
+    <h1>Three Cats Air Hockey</h1>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const context = canvas.getContext('2d');
 
-    <div id="game-wrapper">
-        <canvas id="hockey"></canvas>
-        
-        <div id="ui">
-            <h1 id="title">ТРИ КОТА:<br>АЭРОХОККЕЙ!</h1>
-            <div id="final-score" class="hidden"></div>
-            <button onclick="startGame()">ИГРАТЬ!</button>
-        </div>
-    </div>
+        const paddles = [{x: 30, y: 150, width: 15, height: 100, color: 'blue'}, {x: 755, y: 150, width: 15, height: 100, color: 'red'}];
+        const puck = {x: canvas.width / 2, y: canvas.height / 2, radius: 15, speedX: 4, speedY: 4};
 
-<script>
-    const canvas = document.getElementById('hockey');
-    const ctx = canvas.getContext('2d');
-    const ui = document.getElementById('ui');
-    const finalScoreEl = document.getElementById('final-score');
+        let playerScores = [0, 0];
+        let isGameRunning = true;
 
-    let playing = false;
-    let player, cpu, puck;
-    const GOAL_LIMIT = 5; // Игра до 5 голов
-
-    // --- Улучшенные Спрайты (Встроены прямо в код) ---
-    // Для этого я использую встроенные SVG. Если ты хочешь реальных Трёх Котов,
-    // замени 'data:image/svg+xml;base64,...' на путь к твоей картинке на GitHub.
-
-    // 1. Коржик (Синяя лапка)
-    const imgPlayer = new Image();
-    imgPlayer.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgZmlsbD0iIzQxNjk1MSIvPjxjaXJjbGUgY3g9IjM1IiBjeT0iMzAiIHI9IjgiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI2NSIgY3k9IjMwIiByPSI4IiBmaWxsPSIjZmZmIi8+PC9zdmc+';
-
-    // 2. Компот (Зелёная лапка)
-    const imgCpu = new Image();
-    imgCpu.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgZmlsbD0iIzMyY2QzMiIvPjxjaXJjbGUgY3g9IjM1IiBjeT0iMzAiIHI9IjgiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI2NSIgY3k9IjMwIiByPSI4IiBmaWxsPSIjZmZmIi8+PC9zdmc+';
-
-    // 3. Шайба (Оранжевая пуговица)
-    const imgPuck = new Image();
-    imgPuck.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI1MCIgZmlsbD0iI2ZmNDUwMCIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjM1IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iNSIvPjxjaXJjbGUgY3g9IjUwIiBjeT0iNTAiIHI9IjUiIGZpbGw9IiNmZmYiLz48L3N2Zz4=';
-
-
-    // --- Звуковые Эффекты ---
-    const ac = new (window.AudioContext || window.webkitAudioContext)();
-
-    function playSound(type) {
-        if (!ac) return;
-        const osc = ac.createOscillator();
-        const gn = ac.createGain();
-        osc.connect(gn).connect(ac.destination);
-
-        if (type === 'hit') {
-            osc.frequency.setValueAtTime(400, ac.currentTime);
-            osc.frequency.exponentialRampToValueAtTime(100, ac.currentTime + 0.1);
-            gn.gain.setValueAtTime(0.3, ac.currentTime);
-            gn.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.1);
-            osc.start(); osc.stop(ac.currentTime + 0.1);
-        } else if (type === 'goal') {
-            // "Миу-миу-миу" эффект (простой синтез)
-            osc.frequency.setValueAtTime(800, ac.currentTime);
-            osc.frequency.setValueAtTime(600, ac.currentTime + 0.1);
-            osc.frequency.setValueAtTime(1000, ac.currentTime + 0.2);
-            gn.gain.setValueAtTime(0.5, ac.currentTime);
-            gn.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.3);
-            osc.start(); osc.stop(ac.currentTime + 0.3);
+        function drawGame() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw paddles
+            paddles.forEach(paddle => {
+                context.fillStyle = paddle.color;
+                context.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+            });
+            // Draw puck
+            context.fillStyle = 'black';
+            context.beginPath();
+            context.arc(puck.x, puck.y, puck.radius, 0, Math.PI * 2);
+            context.fill();
+            // Draw scores
+            context.font = '20px Arial';
+            context.fillText(`Player 1: ${playerScores[0]}`, 20, 30);
+            context.fillText(`Player 2: ${playerScores[1]}`, canvas.width - 100, 30);
         }
-    }
 
-
-    // --- Классы Физики ---
-
-    class Disk {
-        constructor(x, y, r, img) {
-            this.x = x; this.y = y; this.r = r; this.img = img;
-            this.mass = r * r; this.dx = 0; this.dy = 0;
-        }
-        draw() {
-            ctx.drawImage(this.img, this.x - this.r, this.y - this.r, this.r * 2, this.r * 2);
-        }
-    }
-
-    function init() {
-        canvas.width = 360; canvas.height = 640;
-        puck = new Disk(canvas.width / 2, canvas.height / 2, 18, imgPuck);
-        player = new Disk(canvas.width / 2, canvas.height - 70, 35, imgPlayer);
-        cpu = new Disk(canvas.width / 2, 70, 35, imgCpu);
-        player.score = 0; cpu.score = 0;
-        setupControls();
-        loop();
-    }
-
-    function setupControls() {
-        canvas.addEventListener('touchmove', (e) => {
-            if (!playing) return;
-            const touch = e.touches[0];
-            const rect = canvas.getBoundingClientRect();
-            const scaleX = canvas.width / rect.width;
-            const scaleY = canvas.height / rect.height;
-            const tx = (touch.clientX - rect.left) * scaleX;
-            const ty = (touch.clientY - rect.top) * scaleY;
-            
-            // Плавное следование и ограничение своей половиной поля
-            player.x = Math.max(player.r, Math.min(canvas.width - player.r, tx));
-            player.y = Math.max(canvas.height / 2 + player.r, Math.min(canvas.height - player.r, ty));
-        });
-    }
-
-    function startGame() {
-        if (!playing) {
-            init();
-            playing = true;
-            ui.classList.add('hidden');
-        }
-    }
-
-    function gameOver(winner) {
-        playing = false;
-        ui.classList.remove('hidden');
-        document.getElementById('title').innerText = "КОНЕЦ ИГРЫ!";
-        finalScoreEl.innerText = `${winner} выиграл!\nСчёт ${player.score} : ${cpu.score}`;
-        finalScoreEl.classList.remove('hidden');
-    }
-
-    // --- Улучшенная Физика Столкновений ---
-    function resolveCollision(d1, d2) {
-        const dx = d1.x - d2.x;
-        const dy = d1.y - d2.y;
-        const dist = Math.hypot(dx, dy);
-
-        if (dist < d1.r + d2.r) {
-            // Выталкиваем, чтобы не слипались
-            const overlap = (d1.r + d2.r - dist) / 2;
-            const nx = dx / dist; const ny = dy / dist;
-            d1.x += nx * overlap; d1.y += ny * overlap;
-            d2.x -= nx * overlap; d2.y -= ny * overlap;
-
-            // Передача импульса (удар)
-            if (d1 === puck || d2 === puck) {
-                puck.dx = (nx * 10);
-                puck.dy = (ny * 10);
-                playSound('hit');
-                if (navigator.vibrate) navigator.vibrate(20); // Вибрация на мобильных
+        function updateGame() {
+            puck.x += puck.speedX;
+            puck.y += puck.speedY;
+            // Collision with top/bottom
+            if (puck.y <= puck.radius || puck.y >= canvas.height - puck.radius) {
+                puck.speedY = -puck.speedY;
+            }
+            // Collision with paddles
+            paddles.forEach(paddle => {
+                if (puck.x - puck.radius < paddle.x + paddle.width && puck.x + puck.radius > paddle.x && puck.y > paddle.y && puck.y < paddle.y + paddle.height) {
+                    puck.speedX = -puck.speedX;
+                }
+            });
+            // Scoring
+            if (puck.x <= 0) {
+                playerScores[1]++;
+                resetPuck();
+            } else if (puck.x >= canvas.width) {
+                playerScores[0]++;
+                resetPuck();
             }
         }
-    }
 
-    function update() {
-        if (!playing) return;
-
-        puck.x += puck.dx; puck.y += puck.dy;
-        puck.dx *= 0.985; puck.dy *= 0.985; // Трение
-
-        // Отскок от стен
-        if (puck.x - puck.r < 0 || puck.x + puck.r > canvas.width) { puck.dx *= -1; playSound('hit'); }
-
-        // ИИ для Компота (слегка "тупит", чтобы можно было выиграть)
-        cpu.x += (puck.x - cpu.x) * 0.08;
-        cpu.y += (70 - cpu.y) * 0.1; // Возвращается к воротам
-
-        // Столкновения
-        resolveCollision(puck, player);
-        resolveCollision(puck, cpu);
-
-        // Ворота и Счёт
-        let goal = false;
-        if (puck.y < 0) { player.score++; goal = true; }
-        else if (puck.y > canvas.height) { cpu.score++; goal = true; }
-
-        if (goal) {
-            playSound('goal');
-            puck.x = canvas.width / 2; puck.y = canvas.height / 2;
-            puck.dx = 0; puck.dy = 0;
-            if (player.score >= GOAL_LIMIT) gameOver("Коржик (Ты)");
-            if (cpu.score >= GOAL_LIMIT) gameOver("Компот (ПК)");
+        function resetPuck() {
+            puck.x = canvas.width / 2;
+            puck.y = canvas.height / 2;
+            puck.speedX = (Math.random() > 0.5 ? 4 : -4);
+            puck.speedY = Math.random() * 4 - 2;
         }
-    }
 
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Разметка поля
-        ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 5; ctx.setLineDash([10, 10]);
-        ctx.beginPath(); ctx.moveTo(0, canvas.height/2); ctx.lineTo(canvas.width, canvas.height/2); ctx.stroke();
-        ctx.setLineDash([]); // Сплошная линия для ворот
-        ctx.fillStyle = '#ffcc00'; ctx.fillRect(canvas.width/2 - 50, 0, 100, 10); ctx.fillRect(canvas.width/2 - 50, canvas.height - 10, 100, 10);
+        function gameLoop() {
+            if (isGameRunning) {
+                drawGame();
+                updateGame();
+                requestAnimationFrame(gameLoop);
+            }
+        }
 
-        // Отрисовка объектов
-        puck.draw(); player.draw(); cpu.draw();
+        // Event listeners for multi-touch controls
+        window.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                const touch = e.touches[0];
+                if (touch.clientX < canvas.width / 2) {
+                    paddles[0].y = touch.clientY - paddles[0].height / 2;
+                } else {
+                    paddles[1].y = touch.clientY - paddles[1].height / 2;
+                }
+            }
+        });
 
-        // Счёт на поле
-        ctx.fillStyle = '#4a2c1d'; ctx.font = 'bold 30px Comic Sans MS'; ctx.textAlign = 'center';
-        ctx.fillText(player.score, canvas.width - 30, canvas.height/2 + 40);
-        ctx.fillText(cpu.score, canvas.width - 30, canvas.height/2 - 20);
-    }
-
-    function loop() {
-        update();
-        draw();
-        requestAnimationFrame(loop);
-    }
-
-    init(); // Инициализация, но без запуска игры (она стартует по кнопке)
-</script>
+        gameLoop();
+    </script>
 </body>
 </html>
