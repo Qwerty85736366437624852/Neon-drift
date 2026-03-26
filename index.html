@@ -1,26 +1,122 @@
-<html>
+<!DOCTYPE html>
+<html lang="ru">
 <head>
-    <title>Neon Drift</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Neon Drift Single File</title>
     <style>
-        body {
-            background-color: black;
-            color: lime;
-            font-family: Arial, sans-serif;
-        }
-        h1 {
-            text-align: center;
-        }
+        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: sans-serif; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #0ff; }
+        button { padding: 15px 30px; background: none; border: 2px solid #0ff; color: #0ff; font-weight: bold; cursor: pointer; }
+        .hidden { display: none; }
+        #score { position: fixed; top: 10px; left: 10px; color: #0ff; font-size: 20px; }
     </style>
 </head>
 <body>
-    <h1>Welcome to Neon Drift Game</h1>
-    <p>Get ready to dive into the most exciting racing experience of 2026!</p>
-    <p>Controls:</p>
-    <ul>
-        <li>Arrow keys - Steer your vehicle</li>
-        <li>Space - Boost</li>
-        <li>P - Pause</li>
-    </ul>
-    <p>Enjoy the game!</p>
+    <div id="score">0</div>
+    <div id="ui">
+        <h1 id="title">NEON DRIFT</h1>
+        <button onclick="startGame()">START</button>
+    </div>
+    <canvas id="g"></canvas>
+
+<script>
+const canvas = document.getElementById('g');
+const ctx = canvas.getContext('2d');
+const scoreEl = document.getElementById('score');
+const ui = document.getElementById('ui');
+
+let playing = false, score = 0, speed = 5;
+let player, obstacles = [];
+
+// Простой синтезатор звука взрыва (White Noise)
+function playExplosion() {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    const buf = ac.createBuffer(1, ac.sampleRate * 0.3, ac.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < buf.length; i++) data[i] = Math.random() * 2 - 1;
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    const gn = ac.createGain();
+    gn.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.3);
+    src.connect(gn).connect(ac.destination);
+    src.start();
+}
+
+class Player {
+    constructor() {
+        this.x = canvas.width / 2;
+        this.y = canvas.height - 80;
+        this.targetX = this.x;
+    }
+    draw() {
+        this.x += (this.targetX - this.x) * 0.1;
+        ctx.shadowBlur = 15; ctx.shadowColor = '#0ff';
+        ctx.fillStyle = '#0ff';
+        ctx.beginPath();
+        ctx.moveTo(this.x, this.y - 20);
+        ctx.lineTo(this.x - 15, this.y + 15);
+        ctx.lineTo(this.x + 15, this.y + 15);
+        ctx.fill();
+    }
+}
+
+function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    if (player) player.x = player.targetX = canvas.width / 2;
+}
+
+window.addEventListener('resize', resize);
+window.addEventListener('touchstart', e => {
+    if (!playing) return;
+    player.targetX = e.touches[0].clientX;
+});
+
+function startGame() {
+    playing = true;
+    score = 0;
+    speed = 5;
+    obstacles = [];
+    player = new Player();
+    ui.classList.add('hidden');
+    loop();
+}
+
+function loop() {
+    if (!playing) return;
+    ctx.fillStyle = 'rgba(0,0,0,0.2)'; // Эффект шлейфа
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (Math.random() < 0.03) {
+        obstacles.push({x: Math.random() * canvas.width, y: -50, w: 40 + Math.random() * 60});
+    }
+
+    player.draw();
+
+    obstacles.forEach((o, i) => {
+        o.y += speed;
+        ctx.fillStyle = '#f0f';
+        ctx.shadowColor = '#f0f';
+        ctx.fillRect(o.x, o.y, o.w, 15);
+
+        // Коллизия
+        if (Math.abs(player.x - (o.x + o.w/2)) < o.w/2 + 10 && Math.abs(player.y - o.y) < 20) {
+            playing = false;
+            playExplosion();
+            ui.classList.remove('hidden');
+            document.getElementById('title').innerText = "GAME OVER";
+        }
+    });
+
+    score++;
+    speed += 0.002;
+    scoreEl.innerText = score;
+    requestAnimationFrame(loop);
+}
+
+resize();
+</script>
 </body>
 </html>
